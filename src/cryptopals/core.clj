@@ -57,3 +57,7 @@
   "Convert a hex encoded string to a base64 encoded string."
   (comp encode-base64
         decode-hex-str))
+
+(def xor
+  "Byte-wise XOR"
+  (partial map bit-xor))
