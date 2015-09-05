@@ -33,3 +33,8 @@
                 (decode-hex-str "686974207468652062756c6c277320657965"))
            (decode-hex-str "746865206b696420646f6e277420706c6179")))))
 
+;;; http://cryptopals.com/sets/1/challenges/3/
+(deftest set-1-challenge-3
+  (testing "Single character xor"
+    (is (= (bruteforce-repeating-singlechar-xor-from-hex "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
+           (map byte "Cooking MC's like a pound of bacon")))))

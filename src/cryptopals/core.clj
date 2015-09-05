@@ -22,13 +22,15 @@
                  [(list) %]
                  (range 4))))
 
+(defn inclusive-char-range
+  [beginning ending]
+  (map byte (range (byte beginning)
+                   (inc (byte ending)))))
+
 (def base64-characters
-  (concat (map char (range (byte \A)
-                           (inc (byte \Z))))
-          (map char (range (byte \a)
-                           (inc (byte \z))))
-          (map char (range (byte \0)
-                           (inc (byte \9))))
+  (concat (inclusive-char-range \A \Z)
+          (inclusive-char-range \a \z)
+          (inclusive-char-range \0 \9)
           [\+ \/]))
 
 (defn encode-base64
@@ -42,7 +44,8 @@
         ;; Translate each group into base64 characters
         xfs (comp (map #(reduce byte-accumulator %))
                   (mapcat sixbit-extraction)
-                  (map #(nth base64-characters %)))
+                  (map #(nth base64-characters %))
+                  (map char))
         ;; Drop the appropriate number of trailing "A"s
         base64 (->> byte-blocks
                     (sequence xfs)
@@ -61,3 +64,50 @@
 (def xor
   "Byte-wise XOR"
   (partial map bit-xor))
+
+(def letter-PDF
+  "Character frequency map of the alphabet (and space) for English.
+    See: http://www.data-compression.com/english.html"
+  (zipmap (concat (inclusive-char-range \a \z)
+                  [(byte \space)])
+          [0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881
+           0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490
+           0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563
+           0.0515760 0.0729357 0.0225134 0.0082903 0.0171272 0.0013692
+           0.0145984 0.0007836 0.1918182]))
+
+(defn grade-english
+  "Given a collection of letters represented as bytes, normalize the
+  frequency of each letter present in the sample. Compare this
+  distribution against `letter-PDF` and return the average
+  drift."
+  [byte-collection]
+  (let [n (count byte-collection)
+        actual-frequencies (->> byte-collection
+                                (replace (zipmap (inclusive-char-range \A \Z)
+                                                 (inclusive-char-range \a \z)))
+                                frequencies)]
+    (/ (->> letter-PDF
+            (map (fn [[letter expected-frequency]]
+                   (let [actual-frequency (actual-frequencies letter 0)
+                         expected-frequency (* expected-frequency n)]
+                     (Math/abs (- expected-frequency
+                                  actual-frequency)))))
+            (apply +))
+       (count letter-PDF))))
+
+(defn bruteforce-singlechar-xor
+  "Given a series of XOR encrypted bytes, bruteforce the plaintext by
+  heuristically grading the statistical likelyhood it is English."
+  [cipher-bytes]
+  (->> (range (inc Byte/MAX_VALUE))
+       (map #(repeat %))
+       (map #(xor cipher-bytes %))
+       (map (juxt grade-english identity))
+       (sort-by first)
+       first
+       second))
+
+(def bruteforce-repeating-singlechar-xor-from-hex
+  (comp bruteforce-singlechar-xor
+        decode-hex-str))
