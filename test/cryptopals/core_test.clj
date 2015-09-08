@@ -37,4 +37,8 @@
 (deftest set-1-challenge-3
   (testing "Single character xor"
     (is (= (bruteforce-repeating-singlechar-xor-from-hex "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
-           (map byte "Cooking MC's like a pound of bacon")))))
+           (map byte "Cooking MC's like a pound of bacon"))))
+  (testing "Bigram lookup"
+    (is (= (bigram-PDF (byte \a) (byte \b))
+           0.0228302))))
+

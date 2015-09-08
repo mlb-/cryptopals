@@ -65,11 +65,14 @@
   "Byte-wise XOR"
   (partial map bit-xor))
 
+(def a-to-z-and-space
+  (concat (inclusive-char-range \a \z)
+          [(byte \space)]))
+
 (def letter-PDF
   "Character frequency map of the alphabet (and space) for English.
     See: http://www.data-compression.com/english.html"
-  (zipmap (concat (inclusive-char-range \a \z)
-                  [(byte \space)])
+  (zipmap a-to-z-and-space
           [0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881
            0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490
            0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563
@@ -95,6 +98,53 @@
                                   actual-frequency)))))
             (apply +))
        (count letter-PDF))))
+
+(defn bigram-line-formatter
+  [line]
+  (->> (.split line " ")
+       (mapv #(Double/parseDouble %))))
+
+(def bigram-PDF-data
+  "This is a 27x27 bigram frequency lookup table based on English
+  text. Ordered by a-z, then space."
+  (->> "bigrams"
+       clojure.java.io/resource
+       clojure.java.io/reader
+       line-seq
+       (mapv bigram-line-formatter)))
+
+(defn bigram-PDF
+  "Given two characters represented by Java Bytes, return the
+  probability that `y` follows `x`."
+  [x y]
+  (let [x (.indexOf a-to-z-and-space x)
+        y (.indexOf a-to-z-and-space y)]
+    (when (and (not (neg? x))
+               (not (neg? y)))
+      (-> bigram-PDF-data
+          (nth x)
+          (nth y)))))
+
+(defn grade-english-2
+  [byte-collection]
+  (let [n (count byte-collection)
+        actual-frequencies (->> byte-collection
+                                (replace (zipmap (inclusive-char-range \A \Z)
+                                                 (inclusive-char-range \a \z)))
+                                (partition 2 1)
+                                frequencies)
+        bigram-search-space (for [x a-to-z-and-space
+                                  y a-to-z-and-space]
+                              [x y])]
+    (/ (->> bigram-search-space
+            (map (fn [[x y]]
+                   (let [expected (* n
+                                     (bigram-PDF x y))
+                         actual (actual-frequencies [x y] 0)]
+                     (Math/abs (- expected
+                                  actual)))))
+            (apply +))
+       (Math/pow (count bigram-search-space) 2))))
 
 (defn bruteforce-singlechar-xor
   "Given a series of XOR encrypted bytes, bruteforce the plaintext by
