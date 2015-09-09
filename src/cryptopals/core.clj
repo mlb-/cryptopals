@@ -146,18 +146,34 @@
             (apply +))
        (Math/pow (count bigram-search-space) 2))))
 
-(defn bruteforce-singlechar-xor
-  "Given a series of XOR encrypted bytes, bruteforce the plaintext by
-  heuristically grading the statistical likelyhood it is English."
+(defn generate-single-char-xor-candidates
+  "Given a `cipher-bytes` generate all potential candidates (and their
+  `grade-english` value) if encoded by a single character XOR."
   [cipher-bytes]
   (->> (range (inc Byte/MAX_VALUE))
        (map #(repeat %))
        (map #(xor cipher-bytes %))
-       (map (juxt grade-english identity))
-       (sort-by first)
-       first
-       second))
+       (map (juxt grade-english identity))))
+
+(def select-best-english-candidate
+  (comp second
+        first
+        #(sort-by first %)))
+
+(def bruteforce-singlechar-xor
+  "Given a series of XOR encrypted bytes, bruteforce the plaintext by
+  heuristically grading the statistical likelyhood it is English."
+  (comp select-best-english-candidate
+        generate-single-char-xor-candidates))
 
 (def bruteforce-repeating-singlechar-xor-from-hex
   (comp bruteforce-singlechar-xor
         decode-hex-str))
+
+(def bruteforce-repeating-singlechar-xor-from-hex-collection
+  "Same as `bruteforce-repeating-singlechar-xor-from-hex`, but take in
+  a collection of hex encoded sequences and return the candidate which
+  was most likely encrypted with a repeating character XOR."
+  (comp select-best-english-candidate
+        #(mapcat generate-single-char-xor-candidates %)
+        #(map decode-hex-str %)))

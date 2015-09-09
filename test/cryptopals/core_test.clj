@@ -42,3 +42,12 @@
     (is (= (bigram-PDF (byte \a) (byte \b))
            0.0228302))))
 
+;;; http://cryptopals.com/sets/1/challenges/4/
+(deftest set-1-challenge-4
+  (testing "Find the plaintext given multiple candidates."
+    (is (= (->> "4.txt"
+                clojure.java.io/resource
+                clojure.java.io/reader
+                line-seq
+                bruteforce-repeating-singlechar-xor-from-hex-collection)
+           (map byte "Now that the party is jumping\n")))))
