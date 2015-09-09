@@ -177,3 +177,8 @@
   (comp select-best-english-candidate
         #(mapcat generate-single-char-xor-candidates %)
         #(map decode-hex-str %)))
+
+(defn repeating-key-xor
+  [bytes repeating-key]
+  (xor bytes
+       (cycle repeating-key)))
