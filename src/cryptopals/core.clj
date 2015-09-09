@@ -182,3 +182,9 @@
   [bytes repeating-key]
   (xor bytes
        (cycle repeating-key)))
+
+(defn hamming-distance
+  [& bytes-collection]
+  (->> (apply xor bytes-collection)
+       (map #(Integer/bitCount %))
+       (apply +)))
