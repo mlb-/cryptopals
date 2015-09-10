@@ -63,6 +63,19 @@ I go crazy when I hear a cymbal")
 ;;; http://cryptopals.com/sets/1/challenges/6/
 
 (deftest set-1-challenge-6
+  (testing "Decode base64"
+    (is (= (decode-base64 "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t")
+           (decode-hex-str "49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f69736f6e6f7573206d757368726f6f6d")))
+
+    (is (= (decode-base64 "TWFu")
+           (map byte "Man")))
+
+    (is (= (map decode-base64 ["c3VyZS4=" "c3VyZQ==" "c3Vy" "c3U=" "cw=="])
+           (->> "sure."
+                (iterate butlast)
+                (take-while (complement nil?))
+                (map #(map byte %))))))
+
   (testing "Hamming distance"
     (is (= (hamming-distance (map byte "this is a test")
                              (map byte "wokka wokka!!!"))

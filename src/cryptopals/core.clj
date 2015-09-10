@@ -22,6 +22,20 @@
                  [(list) %]
                  (range 4))))
 
+(defn sixbit-accumulator
+  [acc sixbit]
+  (+ sixbit
+     (bit-shift-left acc 6)))
+
+(def byte-extraction
+  "Extract byte values from a 24-bit value."
+  (comp first
+        #(reduce (fn [[acc block] _]
+                   [(conj acc (bit-and block 127))
+                    (bit-shift-right block 8)])
+                 [(list) %]
+                 (range 3))))
+
 (defn inclusive-char-range
   [beginning ending]
   (map byte (range (byte beginning)
@@ -55,6 +69,21 @@
     (->> padding
          (apply conj base64)
          (apply str))))
+
+(defn decode-base64
+  [encoded-str]
+  (let [without-padding (->> encoded-str
+                             (take-while #(not (= \= %))))
+        not-padded-chars (mod (count without-padding) 4)
+        padded-chars (mod (- 4 not-padded-chars) 4)
+        byte-blocks (->> without-padding
+                         (map byte)
+                         (map #(.indexOf base64-characters %))
+                         (partition 4 4 [0 0 0])
+                         (map #(reduce sixbit-accumulator %))
+                         (mapcat byte-extraction)
+                         (drop-last padded-chars))]
+    byte-blocks))
 
 (def hex->base64
   "Convert a hex encoded string to a base64 encoded string."
