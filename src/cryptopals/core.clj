@@ -225,12 +225,17 @@
                            (apply str)
                            decode-base64)
       keysizes (range 2 41)
+      sample-size 21
       average-hamming-distance (fn [keysize]
                                  (->> encrypted-bytes
                                       (partition keysize)
-                                      (take 2)
-                                      (apply (comp #(/ % keysize)
-                                                   hamming-distance))))
+                                      (take sample-size)
+                                      (partition 2 1)
+                                      (map (partial apply
+                                                    (comp #(/ % keysize)
+                                                          hamming-distance)))
+                                      (apply +)
+                                      (#(/ % sample-size))))
       keysize-candidate (->> keysizes
                              ;; transform keysize -> [edit-distance keysize]
                              (map (juxt average-hamming-distance
