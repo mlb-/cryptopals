@@ -184,7 +184,7 @@
        (map #(xor cipher-bytes %))
        (map (juxt grade-english identity))))
 
-(def select-best-english-candidate
+(def select-best-candidate
   (comp second
         first
         #(sort-by first %)))
@@ -192,7 +192,7 @@
 (def bruteforce-singlechar-xor
   "Given a series of XOR encrypted bytes, bruteforce the plaintext by
   heuristically grading the statistical likelyhood it is English."
-  (comp select-best-english-candidate
+  (comp select-best-candidate
         generate-single-char-xor-candidates))
 
 (def bruteforce-repeating-singlechar-xor-from-hex
@@ -203,7 +203,7 @@
   "Same as `bruteforce-repeating-singlechar-xor-from-hex`, but take in
   a collection of hex encoded sequences and return the candidate which
   was most likely encrypted with a repeating character XOR."
-  (comp select-best-english-candidate
+  (comp select-best-candidate
         #(mapcat generate-single-char-xor-candidates %)
         #(map decode-hex-str %)))
 
@@ -217,3 +217,23 @@
   (->> (apply xor bytes-collection)
        (map #(Integer/bitCount %))
        (apply +)))
+
+(let [encrypted-bytes (->> "6.txt"
+                           clojure.java.io/resource
+                           clojure.java.io/reader
+                           line-seq
+                           (apply str)
+                           decode-base64)
+      keysizes (range 2 41)
+      average-hamming-distance (fn [keysize]
+                                 (->> encrypted-bytes
+                                      (partition keysize)
+                                      (take 2)
+                                      (apply (comp #(/ % keysize)
+                                                   hamming-distance))))
+      keysize-candidate (->> keysizes
+                             ;; transform keysize -> [edit-distance keysize]
+                             (map (juxt average-hamming-distance
+                                        identity))
+                             select-best-candidate)]
+  keysize-candidate)
