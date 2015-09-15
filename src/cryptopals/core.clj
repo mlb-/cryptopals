@@ -180,9 +180,13 @@
   `grade-english` value) if encoded by a single character XOR."
   [cipher-bytes]
   (->> (range (inc Byte/MAX_VALUE))
-       (map #(repeat %))
-       (map #(xor cipher-bytes %))
-       (map (juxt grade-english identity))))
+       (map (juxt (comp #(xor cipher-bytes %)
+                        #(repeat %))
+                  identity))
+       (map (juxt (comp grade-english
+                        first)
+                  first
+                  second))))
 
 (def select-best-candidate
   (comp second
