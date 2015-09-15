@@ -244,5 +244,15 @@
                              ;; transform keysize -> [edit-distance keysize]
                              (map (juxt average-hamming-distance
                                         identity))
-                             select-best-candidate)]
-  keysize-candidate)
+                             select-best-candidate)
+      encrypting-key (->> encrypted-bytes
+                          (partition keysize-candidate)
+                          (apply map vector)
+                          (map (comp #(nth % 2)
+                                     first
+                                     #(sort-by first %)
+                                     generate-single-char-xor-candidates)))]
+  (->> (repeating-key-xor encrypted-bytes
+                          encrypting-key)
+       (map char)
+       (apply str)))
