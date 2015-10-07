@@ -79,4 +79,12 @@ I go crazy when I hear a cymbal")
   (testing "Hamming distance"
     (is (= (hamming-distance (map byte "this is a test")
                              (map byte "wokka wokka!!!"))
-           37))))
+           37)))
+  (testing "Break repeating key XOR"
+    (is (= (break-repeating-key-xor (->> "6.txt"
+                                         clojure.java.io/resource
+                                         clojure.java.io/reader
+                                         line-seq
+                                         (apply str)
+                                         decode-base64))
+           (map byte "Terminator X: Bring the noise")))))

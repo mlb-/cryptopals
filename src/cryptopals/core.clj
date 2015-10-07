@@ -222,37 +222,30 @@
        (map #(Integer/bitCount %))
        (apply +)))
 
-(let [encrypted-bytes (->> "6.txt"
-                           clojure.java.io/resource
-                           clojure.java.io/reader
-                           line-seq
-                           (apply str)
-                           decode-base64)
-      keysizes (range 2 41)
-      sample-size 21
-      average-hamming-distance (fn [keysize]
-                                 (->> encrypted-bytes
-                                      (partition keysize)
-                                      (take sample-size)
-                                      (partition 2 1)
-                                      (map (partial apply
-                                                    (comp #(/ % keysize)
-                                                          hamming-distance)))
-                                      (apply +)
-                                      (#(/ % sample-size))))
-      keysize-candidate (->> keysizes
-                             ;; transform keysize -> [edit-distance keysize]
-                             (map (juxt average-hamming-distance
-                                        identity))
-                             select-best-candidate)
-      encrypting-key (->> encrypted-bytes
-                          (partition keysize-candidate)
-                          (apply map vector)
-                          (map (comp #(nth % 2)
-                                     first
-                                     #(sort-by first %)
-                                     generate-single-char-xor-candidates)))]
-  (->> (repeating-key-xor encrypted-bytes
-                          encrypting-key)
-       (map char)
-       (apply str)))
+(defn break-repeating-key-xor
+  [encrypted-bytes]
+  (let [keysizes (range 2 41)
+        sample-size 21
+        average-hamming-distance (fn [keysize]
+                                   (->> encrypted-bytes
+                                        (partition keysize)
+                                        (take sample-size)
+                                        (partition 2 1)
+                                        (map (partial apply
+                                                      (comp #(/ % keysize)
+                                                            hamming-distance)))
+                                        (apply +)
+                                        (#(/ % sample-size))))
+        keysize-candidate (->> keysizes
+                               ;; transform keysize -> [edit-distance keysize]
+                               (map (juxt average-hamming-distance
+                                          identity))
+                               select-best-candidate)
+        encrypting-key (->> encrypted-bytes
+                            (partition keysize-candidate)
+                            (apply map vector)
+                            (map (comp #(nth % 2)
+                                       first
+                                       #(sort-by first %)
+                                       generate-single-char-xor-candidates)))]
+    encrypting-key))
